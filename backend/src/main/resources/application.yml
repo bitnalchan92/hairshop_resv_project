@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: hairshop-backend
+
+  # Database
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hairshop
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # File Upload
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Server
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+# JWT
+jwt:
+  secret: your-super-secret-jwt-key-please-change-this-in-production-minimum-256-bits
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# OAuth
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:your_kakao_client_id}
+    client-secret: ${KAKAO_CLIENT_SECRET:your_kakao_client_secret}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:3000/auth/callback/kakao}
+
+  naver:
+    client-id: ${NAVER_CLIENT_ID:your_naver_client_id}
+    client-secret: ${NAVER_CLIENT_SECRET:your_naver_client_secret}
+    redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:3000/auth/callback/naver}
+
+# Toss Payments
+toss:
+  client-key: ${TOSS_CLIENT_KEY:test_ck_xxx}
+  secret-key: ${TOSS_SECRET_KEY:test_sk_xxx}
+  success-url: ${TOSS_SUCCESS_URL:http://localhost:3000/payment/success}
+  fail-url: ${TOSS_FAIL_URL:http://localhost:3000/payment/fail}
+
+# Firebase (푸시 알림)
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:firebase-credentials.json}
+
+# Kakao Alimtalk (알림톡)
+kakao:
+  alimtalk:
+    api-key: ${KAKAO_ALIMTALK_API_KEY:your_api_key}
+    sender-key: ${KAKAO_ALIMTALK_SENDER_KEY:your_sender_key}
+
+# Logging
+logging:
+  level:
+    com.hairshop: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG

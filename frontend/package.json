@@ -1,0 +1,47 @@
+{
+  "name": "hairshop-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:fix": "npm audit fix",
+    "security:check": "npm outdated",
+    "security:weekly": "npm audit && npm outdated"
+  },
+  "dependencies": {
+    "next": "14.2.18",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tailwindcss": "3.4.1",
+    "autoprefixer": "10.4.17",
+    "postcss": "8.4.33",
+    "zustand": "4.5.0",
+    "axios": "1.6.5",
+    "swr": "2.2.4",
+    "react-hook-form": "7.49.3",
+    "zod": "3.22.4",
+    "@hookform/resolvers": "3.3.4",
+    "date-fns": "3.0.6",
+    "firebase": "10.7.2",
+    "nanoid": "5.0.4",
+    "clsx": "2.1.0",
+    "tailwind-merge": "2.2.0",
+    "class-variance-authority": "0.7.0"
+  },
+  "devDependencies": {
+    "typescript": "5.3.3",
+    "@types/node": "20.11.0",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.2.18"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.0.0"
+  }
+}
