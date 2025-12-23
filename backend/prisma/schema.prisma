@@ -1,0 +1,273 @@
+// Prisma Schema for Multi-tenant Booking Platform
+// Database: PostgreSQL
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 플랫폼 관리자 (Platform Admin)
+// ============================================
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+// ============================================
+// 사장님/스토어 (Tenant)
+// ============================================
+model Tenant {
+  id                        String   @id @default(cuid())
+  slug                      String   @unique // URL용: jimin-salon
+  businessName              String   @map("business_name") // 상호명
+  businessType              String   @map("business_type") // 미용실, 필라테스, 네일샵 등
+  ownerName                 String   @map("owner_name")
+  ownerEmail                String   @unique @map("owner_email")
+  ownerPhone                String   @map("owner_phone")
+  passwordHash              String   @map("password_hash")
+  address                   String?
+  businessRegistrationNumber String? @map("business_registration_number")
+
+  // 구독 관리
+  subscriptionPlan          String   @default("free") @map("subscription_plan") // free, basic, premium
+  subscriptionStatus        String   @default("active") @map("subscription_status") // active, suspended, expired
+  subscriptionStartDate     DateTime? @map("subscription_start_date")
+  subscriptionEndDate       DateTime? @map("subscription_end_date")
+
+  status                    String   @default("active") // active, inactive, suspended
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  branding      TenantBranding?
+  storeInfo     StoreInfo?
+  services      Service[]
+  holidays      Holiday[]
+  bookings      Booking[]
+  customers     Customer[]
+  notifications Notification[]
+  payments      Payment[]
+
+  @@index([slug])
+  @@index([subscriptionStatus])
+  @@map("tenants")
+}
+
+// ============================================
+// 사장님 브랜딩 설정 (Tenant Branding)
+// ============================================
+model TenantBranding {
+  id               String   @id @default(cuid())
+  tenantId         String   @unique @map("tenant_id")
+  logoUrl          String?  @map("logo_url")
+  bannerImageUrl   String?  @map("banner_image_url")
+  primaryColor     String   @default("#3B82F6") @map("primary_color")
+  secondaryColor   String   @default("#10B981") @map("secondary_color")
+  backgroundColor  String   @default("#FFFFFF") @map("background_color")
+  fontFamily       String   @default("Inter") @map("font_family")
+  layoutTemplate   String   @default("default") @map("layout_template") // default, salon, pt, nail
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_brandings")
+}
+
+// ============================================
+// 스토어 정보 (Store Info)
+// ============================================
+model StoreInfo {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique @map("tenant_id")
+  description     String?  @db.Text // 스토어 소개
+  addressDetail   String?  @map("address_detail")
+  phone           String?
+  openingHours    Json?    @map("opening_hours") // { "mon": "09:00-18:00", "tue": "09:00-18:00", ... }
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("store_infos")
+}
+
+// ============================================
+// 서비스/상품 (Service)
+// ============================================
+model Service {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  category        String   // 컷, 펌, 염색, PT 수업 등
+  name            String
+  description     String?  @db.Text
+  price           Decimal  @db.Decimal(10, 2)
+  durationMinutes Int      @map("duration_minutes") // 소요시간 (분)
+  imageUrl        String?  @map("image_url")
+  isActive        Boolean  @default(true) @map("is_active")
+  displayOrder    Int      @default(0) @map("display_order") // 정렬 순서
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, category])
+  @@map("services")
+}
+
+// ============================================
+// 휴무일 (Holiday)
+// ============================================
+model Holiday {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  holidayDate DateTime @map("holiday_date") @db.Date
+  reason      String?  // 휴무 사유
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, holidayDate])
+  @@index([tenantId, holidayDate])
+  @@map("holidays")
+}
+
+// ============================================
+// 예약 (Booking)
+// ============================================
+model Booking {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  serviceId       String   @map("service_id")
+
+  // 고객 정보
+  customerName    String   @map("customer_name")
+  customerPhone   String   @map("customer_phone")
+  customerEmail   String?  @map("customer_email")
+
+  // 예약 정보
+  bookingDate     DateTime @map("booking_date") @db.Date
+  bookingTime     DateTime @map("booking_time") @db.Time
+  durationMinutes Int      @map("duration_minutes")
+
+  // 상태 관리
+  status          String   @default("pending") // pending, confirmed, completed, cancelled
+  paymentStatus   String   @default("pending") @map("payment_status") // pending, paid, refunded
+
+  // 금액
+  totalPrice      Decimal  @map("total_price") @db.Decimal(10, 2)
+
+  // 기타
+  specialRequest  String?  @map("special_request") @db.Text
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancelledBy     String?  @map("cancelled_by") // customer, tenant, admin
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  payment       Payment?
+  notifications Notification[]
+  customer      Customer?      @relation(fields: [customerPhone, tenantId], references: [phone, tenantId])
+
+  @@index([tenantId, bookingDate])
+  @@index([tenantId, status])
+  @@index([customerPhone, tenantId])
+  @@map("bookings")
+}
+
+// ============================================
+// 결제 (Payment)
+// ============================================
+model Payment {
+  id             String    @id @default(cuid())
+  tenantId       String    @map("tenant_id")
+  bookingId      String    @unique @map("booking_id")
+
+  amount         Decimal   @db.Decimal(10, 2)
+  paymentMethod  String    @map("payment_method") // card, simple_pay 등
+  paymentGateway String    @map("payment_gateway") // portone, tosspayments
+  transactionId  String?   @map("transaction_id") // PG사 거래 ID
+
+  status         String    @default("pending") // pending, completed, failed, refunded
+  paidAt         DateTime? @map("paid_at")
+  refundedAt     DateTime? @map("refunded_at")
+  refundAmount   Decimal?  @map("refund_amount") @db.Decimal(10, 2)
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([transactionId])
+  @@map("payments")
+}
+
+// ============================================
+// 고객 (Customer) - 선택적
+// ============================================
+model Customer {
+  id            String   @id @default(cuid())
+  tenantId      String   @map("tenant_id")
+  name          String
+  phone         String
+  email         String?
+  totalBookings Int      @default(0) @map("total_bookings")
+  memo          String?  @db.Text // 사장님 메모
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([phone, tenantId])
+  @@index([tenantId, phone])
+  @@map("customers")
+}
+
+// ============================================
+// 알림 (Notification)
+// ============================================
+model Notification {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  bookingId String?  @map("booking_id")
+
+  type      String   // booking_created, booking_confirmed, booking_cancelled 등
+  message   String   @db.Text
+  isRead    Boolean  @default(false) @map("is_read")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isRead])
+  @@index([tenantId, createdAt])
+  @@map("notifications")
+}
